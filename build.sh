@@ -69,6 +69,7 @@ build_env() {
 
 ## fetch first-party versions of binaries we can not 'go get'
 build_setup() {
+	set -x
 	eval "$(build_env)"
 
 	rm -rf "${BUILD_DIR}"
@@ -79,6 +80,7 @@ build_setup() {
 
 	_fetch_url "${PROTOBUF_URL}" "${PROTOBUF_TGZ}"
 	unzip -qod "${BUILD_DIR}" "${BUILD_CACHE}/${PROTOBUF_TGZ}"
+	set +x
 }
 
 ## go-get extra utils needed for CI builds
