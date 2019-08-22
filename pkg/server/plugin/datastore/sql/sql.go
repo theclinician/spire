@@ -378,8 +378,6 @@ func (ds *SQLPlugin) GetNodeSelectors(ctx context.Context,
 	callCounter := ds_telemetry.StartGetNodeSelectorsCall(ds.prepareMetricsForCall(ctx))
 	defer callCounter.Done(&err)
 
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
 	return getNodeSelectors(ctx, ds.db.databaseType, ds.db.raw, req)
 }
 
