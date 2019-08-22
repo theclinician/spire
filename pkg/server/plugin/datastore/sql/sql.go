@@ -293,6 +293,8 @@ func (ds *SQLPlugin) CreateAttestedNode(ctx context.Context,
 // FetchAttestedNode fetches an existing attested node by SPIFFE ID
 func (ds *SQLPlugin) FetchAttestedNode(ctx context.Context,
 	req *datastore.FetchAttestedNodeRequest) (resp *datastore.FetchAttestedNodeResponse, err error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 	callCounter := ds_telemetry.StartFetchNodeCall(ds.prepareMetricsForCall(ctx))
 	defer callCounter.Done(&err)
 
