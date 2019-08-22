@@ -293,10 +293,12 @@ func (ds *SQLPlugin) CreateAttestedNode(ctx context.Context,
 // FetchAttestedNode fetches an existing attested node by SPIFFE ID
 func (ds *SQLPlugin) FetchAttestedNode(ctx context.Context,
 	req *datastore.FetchAttestedNodeRequest) (resp *datastore.FetchAttestedNodeResponse, err error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
 	callCounter := ds_telemetry.StartFetchNodeCall(ds.prepareMetricsForCall(ctx))
 	defer callCounter.Done(&err)
+
+	// explicitly don't use this context for metrics
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 
 	if err = ds.withReadTx(ctx, func(tx *gorm.DB) (err error) {
 		resp, err = fetchAttestedNode(tx, req)
@@ -411,10 +413,12 @@ func (ds *SQLPlugin) FetchRegistrationEntry(ctx context.Context,
 // ListRegistrationEntries lists all registrations (pagination available)
 func (ds *SQLPlugin) ListRegistrationEntries(ctx context.Context,
 	req *datastore.ListRegistrationEntriesRequest) (resp *datastore.ListRegistrationEntriesResponse, err error) {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
 	callCounter := ds_telemetry.StartListRegistrationCall(ds.prepareMetricsForCall(ctx))
 	defer callCounter.Done(&err)
+
+	// explicitly don't use this context for metrics
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
 
 	return listRegistrationEntries(ctx, ds.db.databaseType, ds.db.raw, req)
 }
