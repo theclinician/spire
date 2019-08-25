@@ -1874,8 +1874,8 @@ func (s *PluginSuite) TestRace() {
 }
 
 func (s *PluginSuite) TestBindVar() {
-	fn := func(n int) string {
-		return fmt.Sprintf("$%d", n)
+	fn := func(b []byte, n int) []byte {
+		return append(b, fmt.Sprintf("$%d", n)...)
 	}
 	bound := bindVarsFn(fn, "SELECT whatever FROM foo WHERE x = ? AND y = ?")
 	s.Require().Equal("SELECT whatever FROM foo WHERE x = $1 AND y = $2", bound)
@@ -4509,6 +4509,71 @@ ORDER BY e_id, selector_id, dns_name_id
 			query, _, err := buildListRegistrationEntriesQuery(testCase.dialect, req)
 			require.NoError(t, err)
 			require.Equal(t, testCase.query, query)
+		})
+	}
+}
+
+func BenchmarkBuildListRegistrationEntriesQuery(b *testing.B) {
+	manyFilters := &datastore.ListRegistrationEntriesRequest{
+		BySpiffeId: &wrappers.StringValue{
+			Value: "spiffe://spiffe",
+		},
+		ByParentId: &wrappers.StringValue{
+			Value: "spiffe://parent",
+		},
+		BySelectors: &datastore.BySelectors{
+			Selectors: []*common.Selector{{Type: "a", Value: "1"}, {Type: "b", Value: "2"}},
+			Match:     datastore.BySelectors_MATCH_EXACT,
+		},
+		Pagination: &datastore.Pagination{
+			PageSize: 1,
+		},
+	}
+	noFilter := &datastore.ListRegistrationEntriesRequest{}
+	benchs := []struct {
+		msg     string
+		req     *datastore.ListRegistrationEntriesRequest
+		dialect string
+	}{
+		{
+			msg:     "mysql-filters",
+			req:     manyFilters,
+			dialect: "mysql",
+		},
+		{
+			msg:     "mysql-nofilter",
+			req:     noFilter,
+			dialect: "mysql",
+		},
+		{
+			msg:     "postgres-filters",
+			req:     manyFilters,
+			dialect: "postgres",
+		},
+		{
+			msg:     "postgres-nofilter",
+			req:     noFilter,
+			dialect: "postgres",
+		},
+		{
+			msg:     "sqlite-filters",
+			req:     manyFilters,
+			dialect: "sqlite3",
+		},
+		{
+			msg:     "sqlite-nofilter",
+			req:     noFilter,
+			dialect: "sqlite3",
+		},
+	}
+	for _, bb := range benchs {
+		b.Run(bb.msg, func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				query, _, err := buildListRegistrationEntriesQuery(bb.dialect, bb.req)
+				a := func(string, error) {}
+				a(query, err)
+			}
 		})
 	}
 }

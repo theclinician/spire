@@ -1,7 +1,6 @@
 package sql
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -1449,16 +1448,7 @@ func buildListRegistrationEntriesQuery(dbType string, req *datastore.ListRegistr
 }
 
 func buildListRegistrationEntriesQuerySQLite3(req *datastore.ListRegistrationEntriesRequest) (string, []interface{}, error) {
-	builder := new(strings.Builder)
-
-	args, err := appendListRegistrationEntriesFilterQuery("\nWITH listing AS (\n", builder, SQLite, req)
-	if err != nil {
-		return "", nil, err
-	}
-
-	filtered := builder.Len() > 0
-
-	builder.WriteString(`
+	baseQuery := `
 SELECT
 	id as e_id,
 	entry_id,
@@ -1476,7 +1466,24 @@ SELECT
 	NULL AS dns_name
 FROM
 	registered_entries
-`)
+`
+
+	builder := &strings.Builder{}
+	// Reserve at least double the base query size to make space for pagination
+	// and filters. For a query which filters by SpiffeId, ParentId, and two selectors
+	// this value strike a balance such that an extra allocation is not needed without
+	// significantly increasing GC cost. Without an explicit grow is close to
+	// builder.Grow(len(baseQuery)).
+	builder.Grow(len(baseQuery) * 6)
+
+	args, err := appendListRegistrationEntriesFilterQuery("\nWITH listing AS (\n", builder, SQLite, req)
+	if err != nil {
+		return "", nil, err
+	}
+
+	filtered := builder.Len() > 0
+
+	builder.WriteString(baseQuery)
 	if filtered {
 		builder.WriteString("WHERE id IN (SELECT id FROM listing)\n")
 	}
@@ -1525,16 +1532,7 @@ ORDER BY e_id, selector_id, dns_name_id
 }
 
 func buildListRegistrationEntriesQueryPostgreSQL(req *datastore.ListRegistrationEntriesRequest) (string, []interface{}, error) {
-	builder := new(strings.Builder)
-
-	args, err := appendListRegistrationEntriesFilterQuery("\nWITH listing AS (\n", builder, PostgreSQL, req)
-	if err != nil {
-		return "", nil, err
-	}
-
-	filtered := builder.Len() > 0
-
-	builder.WriteString(`
+	baseQuery := `
 SELECT
 	id as e_id,
 	entry_id,
@@ -1552,7 +1550,23 @@ SELECT
 	NULL AS dns_name
 FROM
 	registered_entries
-`)
+`
+	builder := &strings.Builder{}
+	// Reserve at least 6 times the base query size to make space for pagination
+	// and filters. For a query which filters by SpiffeId, ParentId, and two selectors
+	// this value strike a balance such that an extra allocation is not needed without
+	// significantly increasing GC cost. Without an explicit grow is close to
+	// builder.Grow(len(baseQuery)).
+	builder.Grow(len(baseQuery) * 6)
+
+	args, err := appendListRegistrationEntriesFilterQuery("\nWITH listing AS (\n", builder, PostgreSQL, req)
+	if err != nil {
+		return "", nil, err
+	}
+
+	filtered := builder.Len() > 0
+
+	builder.WriteString(baseQuery)
 	if filtered {
 		builder.WriteString("WHERE id IN (SELECT id FROM listing)\n")
 	}
@@ -1601,14 +1615,14 @@ ORDER BY e_id, selector_id, dns_name_id
 }
 
 func postgreSQLRebind(s string) string {
-	return bindVarsFn(func(n int) string {
-		return "$" + strconv.Itoa(n)
+	return bindVarsFn(func(b []byte, n int) []byte {
+		b = append(b, '$')
+		return strconv.AppendInt(b, int64(n), 10)
 	}, s)
 }
 
 func buildListRegistrationEntriesQueryMySQL(req *datastore.ListRegistrationEntriesRequest) (string, []interface{}, error) {
-	builder := new(strings.Builder)
-	builder.WriteString(`
+	baseQuery := `
 SELECT
 	E.id AS e_id,
 	E.entry_id AS entry_id,
@@ -1634,7 +1648,15 @@ LEFT JOIN
 	dns_names D ON joinItem=2 AND E.id=D.registered_entry_id
 LEFT JOIN
 	(federated_registration_entries F INNER JOIN bundles B ON F.bundle_id=B.id) ON joinItem=3 AND E.id=F.registered_entry_id
-`)
+`
+	builder := &strings.Builder{}
+	// Reserve at least double the base query size to make space for pagination
+	// and filters. For a query which filters by SpiffeId, ParentId, and two selectors
+	// this value strike a balance such that an extra allocation is not needed without
+	// significantly increasing GC cost. Without an explicit grow is close to
+	// builder.Grow(len(baseQuery)).
+	builder.Grow(len(baseQuery) * 2)
+	builder.WriteString(baseQuery)
 
 	args, err := appendListRegistrationEntriesFilterQuery("WHERE E.id IN (\n", builder, MySQL, req)
 	if err != nil {
@@ -1648,6 +1670,19 @@ LEFT JOIN
 
 func appendListRegistrationEntriesFilterQuery(filterExp string, builder *strings.Builder, dbType string, req *datastore.ListRegistrationEntriesRequest) ([]interface{}, error) {
 	var args []interface{}
+	var numArgs int
+	if req.BySelectors != nil {
+		numArgs += len(req.BySelectors.Selectors) * 2 // space for type and value
+	}
+	if req.ByParentId != nil {
+		numArgs++
+	}
+	if req.BySpiffeId != nil {
+		numArgs++
+	}
+	if numArgs > 0 {
+		args = make([]interface{}, 0, numArgs)
+	}
 
 	filterCount := 0
 	filter := func() {
@@ -2228,22 +2263,30 @@ func bindVars(db *gorm.DB, query string) string {
 		return query
 	}
 
-	return bindVarsFn(func(n int) string {
-		return dialect.BindVar(n)
+	return bindVarsFn(func(b []byte, n int) []byte {
+		return append(b, dialect.BindVar(n)...)
 	}, query)
 }
 
-func bindVarsFn(fn func(int) string, query string) string {
-	var buf bytes.Buffer
+func bindVarsFn(fn func([]byte, int) []byte, query string) string {
+	// double the query size to avoid allocations as the callback may
+	// add extra characters
+	buf := make([]byte, 0, len(query)*2)
 	var n int
 	for i := strings.Index(query, "?"); i != -1; i = strings.Index(query, "?") {
 		n++
-		buf.WriteString(query[:i])
-		buf.WriteString(fn(n))
+		buf = append(buf, query[:i]...)
+		buf = fn(buf, n)
 		query = query[i+1:]
 	}
-	buf.WriteString(query)
-	return buf.String()
+	// write the remainder of the query
+	buf = append(buf, query...)
+	// the only way to avoid this copy is what strings.Builder does
+	// 	return *(*string)(unsafe.Pointer(&b.buf))
+	// using a []byte saves us a lot of allocations when rebinding variables
+	// (for listRegistrationEntry queries this can happens 10s of times)
+	// as is faster than a strings.Builder.
+	return string(buf)
 }
 
 func (cfg *configuration) Validate() error {
