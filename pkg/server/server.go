@@ -16,7 +16,6 @@ import (
 	"github.com/sirupsen/logrus"
 	common "github.com/spiffe/spire/pkg/common/catalog"
 	"github.com/spiffe/spire/pkg/common/health"
-	"github.com/spiffe/spire/pkg/common/hostservices/metricsservice"
 	"github.com/spiffe/spire/pkg/common/profiling"
 	"github.com/spiffe/spire/pkg/common/telemetry"
 	"github.com/spiffe/spire/pkg/common/util"
@@ -159,10 +158,6 @@ func (s *Server) run(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	metricsService := metricsservice.New(metricsservice.Config{
-		Metrics: metrics,
-	})
-
 	// Create the identity provider host service. It will not be functional
 	// until the call to SetDeps() below. There is some tricky initialization
 	// stuff going on since the identity provider host service requires plugins
@@ -176,7 +171,7 @@ func (s *Server) run(ctx context.Context) (err error) {
 	// until the call to SetDeps() below.
 	agentStore := agentstore.New()
 
-	cat, err := s.loadCatalog(ctx, identityProvider, agentStore, metricsService)
+	cat, err := s.loadCatalog(ctx, identityProvider, agentStore, nil)
 	if err != nil {
 		return err
 	}
