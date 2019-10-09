@@ -22,7 +22,7 @@ const (
 	pluginName          = "docker"
 	subselectorLabel    = "label"
 	subselectorImageID  = "image_id"
-	subselectorImageID  = "env"
+	subselectorEnv      = "env"
 	defaultCgroupPrefix = "/docker"
 )
 
