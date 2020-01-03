@@ -10,48 +10,132 @@ go:
 
 cache:
   directories:
-    - .cache
-    - $HOME/.build
+    # cache the .build cache from the Makefile
+    - $TRAVIS_BUILD_DIR/.build
     # cache the Go module cache
-    - $HOME/go/pkg/mod
-    # cache `go install`-ed binaries across stages. build.sh unsets GOPATH
-    # so this is hitting the default go env of $HOME/go
-    - $HOME/go/bin
+    - $HOME/gopath/pkg/mod
 
 stages:
-  - lint and test
-  - build release
-  - publish images
-  - nightly integration tests
+  - build and test
+  - integration test
+  - publish
+
+before_install:
+  - pip install --user awscli
 
 jobs:
   include:
-    - stage: lint and test
+    #########################################################################
+    # Build and test
+    #########################################################################
+
+    # Lints all the code
+    - stage: build and test
+      env:
+        - CACHE_NAME=lint-cache
       name: lint
       script:
         - make lint
         - make generate-check
         - shellcheck script/*.sh
         - shellcheck .travis/*.sh
-      # linting is OS agnostic but protobuf_verify needs utils to lets be explicit
-      # about its runtime environment
       os: linux 
       dist: xenial
-    - stage: lint and test
-      name: linux tests
-      script:
-        - .travis/run-unit-tests.sh
-      os: macos
-    - stage: lint and test
-      name: macos tests
-      script:
-        - .travis/run-unit-tests.sh
+
+    # Runs unit-tests and builds the binaries on linux
+    - stage: build and test
+      name: linux build and test
       os: linux
       dist: xenial
-    - stage: build release
       script:
+        - COVERALLS_TOKEN= .travis/run-unit-tests.sh
         - make artifact
         - .travis/build-release.sh
+          #- aws s3 sync ./artifacts s3://scytale-artifacts/spire/build/$TRAVIS_BUILD_NUMBER/artifacts
+          #- aws s3 sync ./releases s3://scytale-artifacts/spire/build/$TRAVIS_BUILD_NUMBER/releases
+
+    # Runs unit-tests and builds the binaries on macOS
+    - stage: build and test
+      name: macos build and tests
+      os: osx
+      script:
+        - COVERALLS_TOKEN= .travis/run-unit-tests.sh # skip code coverage on macOS
+        - make artifact
+        - .travis/build-release.sh
+          #- aws s3 sync ./artifacts s3://scytale-artifacts/spire/build/$TRAVIS_BUILD_NUMBER/artifacts
+          #- aws s3 sync ./releases s3://scytale-artifacts/spire/build/$TRAVIS_BUILD_NUMBER/releases
+
+    # Builds Docker images and executes integration tests
+    - stage: build and test
+      name: build images
+      env:
+        - CACHE_NAME=build-image-cache
+      os: linux
+      dist: xenial
+      script:
+        - make images
+        - docker save spire-server:latest-local spire-agent:latest-local k8s-workload-registrar:latest-local oidc-discovery-provider:latest-local | gzip > images.tar.gz
+        - shasum images.tar.gz
+        - aws s3 cp images.tar.gz s3://scytale-artifacts/spire/build/$TRAVIS_BUILD_NUMBER/images.tar.gz
+
+    #########################################################################
+    # Integration test
+    #########################################################################
+
+    - &integration-test
+      stage: integration test
+      os: linux
+      dist: xenial
+      before_script:
+        - aws s3 cp s3://scytale-artifacts/spire/build/$TRAVIS_BUILD_NUMBER/images.tar.gz images.tar.gz
+        - shasum images.tar.gz
+        - zcat images.tar.gz | docker load
+      name: DataStore MySQL
+      script: test/integration/test-one.sh test/integration/suites/datastore-mysql
+
+    - <<: *integration-test
+      name: DataStore PostgreSQL
+      script: test/integration/test-one.sh test/integration/suites/datastore-postgres
+
+    - <<: *integration-test
+      name: Envoy SDS
+      script: test/integration/test-one.sh test/integration/suites/envoy-sds
+
+    - <<: *integration-test
+      name: Ghostunnel (with Federation)
+      script: test/integration/test-one.sh test/integration/suites/ghostunnel-federation
+
+    - <<: *integration-test
+      name: "Join token"
+      script: test/integration/test-one.sh test/integration/suites/join-token
+
+    - <<: *integration-test
+      name: "Kubernetes"
+      script: test/integration/test-one.sh test/integration/suites/k8s
+
+    - <<: *integration-test
+      name: "Rotation"
+      script: test/integration/test-one.sh test/integration/suites/rotation
+
+    - <<: *integration-test
+      name: "Upgrade"
+      script: test/integration/test-one.sh test/integration/suites/upgrade
+
+    #########################################################################
+    # Publish
+    #########################################################################
+
+    - stage: publish
+      if: type = push AND (tag IS present OR branch = master)
+      env:
+        - CACHE_NAME=publish-cache
+      before_script:
+        # Decrypt credentials needed to log into gcr registry
+        - openssl aes-256-cbc -K $encrypted_b48f9e852489_key -iv $encrypted_b48f9e852489_iv -in .travis/spire-travis-ci.json.enc -out .travis/spire-travis-ci.json -d
+      script:
+        - aws s3 sync s3://scytale-artifacts/spire/build/$TRAVIS_BUILD_NUMBER .
+        - gzip -d < images.tar.gz | docker load
+        - .travis/publish-images.sh
       os: linux
       dist: xenial
       deploy:
@@ -75,30 +159,12 @@ jobs:
           on:
             tags: true
             condition: $GITHUB_TOKEN != ""
+      after_script:
+        - aws s3 rm --recursive s3://scytale-artifacts/spire/build/$TRAVIS_BUILD_NUMBER
 
-    - stage: publish images
-      if: type = push AND (tag IS present OR branch = master)
-      os: linux
-      dist: xenial
-      before_script:
-        # Decrypt credentials needed to log into gcr registry
-        - openssl aes-256-cbc -K $encrypted_b48f9e852489_key -iv $encrypted_b48f9e852489_iv -in .travis/spire-travis-ci.json.enc -out .travis/spire-travis-ci.json -d
-      script:
-        - make images
-        - make integration
-        - .travis/publish-images.sh
-
-    - stage: nightly integration tests
-      if: type = cron
-      os: linux
-      dist: xenial
-      script:
-        - make images
-        - make integration
-
-notifications:
-  email:
-    recipients:
-      - spire-dev@spiffe.io
-  slack:
-    secure: auV9VWkA50+tf4cKUUkMH/KqggKSJCBV9ruLSF1LVgqQYnK34rp/PPzx4gTiQYA07ltnu8Hi13XMoN5+OFsRfzVRCKP1tlGuTvVhpsoyMGiNxBY1Yw2OhZXRoSjCwJkuBsAkkaxAgsC58IEnxhKq+M83dDYx+WiybO+aQnQ6ExbGE4oUBhhBkYKrHy4Kt9/3yWLqicV/VXFtvwbXG5OG1zNNOYCUEud4Y8j6pcb0kyVqlHFjAjasLPsln0QSaTxOThLZCxMZD2zpbI1xxO5tBusqDe1QOMSgsyAbDaNk7wCb2kU+0hRKcfiuWShrswhECSJsYUImLq4c77WbdhrjRgscgY2779T/jaJHbG3Lx7GlDWYLSgFcM8VfZK+K5XPcm35F2qGPiEjtYEEAPS2qQM9PZyvTEVPxjNEc2PE3bINTjibcKbfATNa1ULQvJ6ixtSL9Ao8828iUfaR0mK4eaWnJckov5OaGvah+v6vh49JqZTEN3Or8XTUw0ra14euS6jR30XB2Y3S8/0NuvHY+ytJe36yQn9FdFM3asNpBuNP7F9v00WJr3+Lhg7KHMd0m19ulwtmXiWJYU25AVMk/oXp+aq+678AvhYkYZGaUzC3timsuTlAjH9DA9yxBW+8KE9y46Jq8vXHXhKTfdKDVVUyOFxKKGAjCA5QbeKx+5QU=
+          #notifications:
+          #  email:
+          #    recipients:
+          #      - spire-dev@spiffe.io
+          #  slack:
+          #    secure: auV9VWkA50+tf4cKUUkMH/KqggKSJCBV9ruLSF1LVgqQYnK34rp/PPzx4gTiQYA07ltnu8Hi13XMoN5+OFsRfzVRCKP1tlGuTvVhpsoyMGiNxBY1Yw2OhZXRoSjCwJkuBsAkkaxAgsC58IEnxhKq+M83dDYx+WiybO+aQnQ6ExbGE4oUBhhBkYKrHy4Kt9/3yWLqicV/VXFtvwbXG5OG1zNNOYCUEud4Y8j6pcb0kyVqlHFjAjasLPsln0QSaTxOThLZCxMZD2zpbI1xxO5tBusqDe1QOMSgsyAbDaNk7wCb2kU+0hRKcfiuWShrswhECSJsYUImLq4c77WbdhrjRgscgY2779T/jaJHbG3Lx7GlDWYLSgFcM8VfZK+K5XPcm35F2qGPiEjtYEEAPS2qQM9PZyvTEVPxjNEc2PE3bINTjibcKbfATNa1ULQvJ6ixtSL9Ao8828iUfaR0mK4eaWnJckov5OaGvah+v6vh49JqZTEN3Or8XTUw0ra14euS6jR30XB2Y3S8/0NuvHY+ytJe36yQn9FdFM3asNpBuNP7F9v00WJr3+Lhg7KHMd0m19ulwtmXiWJYU25AVMk/oXp+aq+678AvhYkYZGaUzC3timsuTlAjH9DA9yxBW+8KE9y46Jq8vXHXhKTfdKDVVUyOFxKKGAjCA5QbeKx+5QU=
