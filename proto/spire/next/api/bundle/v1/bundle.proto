@@ -8,34 +8,76 @@ import "spire/next/types/status.proto";
 
 service Bundle {
     // Lists bundles.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc ListBundles(ListBundlesRequest) returns (ListBundlesResponse);
 
     // Gets a bundle. If the bundle does not exist, NOT_FOUND is returned.
+    //
+    // The caller must be local or present an admin X509-SVID, unless the
+    // bundle for the trust domain of the server is requested, in which case,
+    // the RPC is unauthenticated.
     rpc GetBundle(GetBundleRequest) returns (spire.types.Bundle);
 
-    // Creates a bundle. If the bundle already exists, ALREADY_EXISTS is returned.
+    // Creates a bundle. If the bundle already exists, ALREADY_EXISTS is
+    // returned. If the bundle is for the trust domain of the SPIRE server,
+    // INVALID_ARGUMENT is returned.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc CreateBundle(CreateBundleRequest) returns (spire.types.Bundle);
 
-    // Batch creates one or more bundles.
+    // Batch creates one or more bundles. See CreateBundle for details on
+    // the status codes that will be returned in the results.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc BatchCreateBundle(BatchCreateBundleRequest) returns (BatchCreateBundleResponse);
 
     // Updates a bundle. If the bundle does not exist, NOT_FOUND is returned.
+    // If the bundle is for the trust domain of the SPIRE server,
+    // INVALID_ARGUMENT is returned.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc UpdateBundle(UpdateBundleRequest) returns (spire.types.Bundle);
 
-    // Batch updates one or more bundles.
+    // Batch updates one or more bundles. See UpdateBundle for details on
+    // the status codes that will be returned in the results.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc BatchUpdateBundle(BatchUpdateBundleRequest) returns (BatchUpdateBundleResponse);
 
-    // Sets a bundle, creating a new bundle if one doesn't already exist
-    // for the trust domain, or otherwise updating the existing bundle.
+    // Sets a bundle, creating a new bundle if one doesn't already exist for
+    // the trust domain, or otherwise updating the existing bundle. If the
+    // bundle is for the trust domain of the SPIRE server, INVALID_ARGUMENT is
+    // returned.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc SetBundle(SetBundleRequest) returns (spire.types.Bundle);
 
-    // Batch upserts one or more bundles.
+    // Batch upserts one or more bundles. See SetBundle for details on the
+    // status codes that will be returned in the results.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc BatchSetBundle(BatchSetBundleRequest) returns (BatchSetBundleResponse);
 
+    // Append to a bundle. Items specified in the bundle in the request are
+    // appended to the existing bundle. If the bundle does not exist, NOT_FOUND
+    // is returned. This is the only RPC that can be used to update the
+    // bundle for the trust domain of the SPIRE server.
+    //
+    // The caller must be local or present an admin or downstream X509-SVID.
+    rpc AppendBundle(AppendBundleRequest) returns (spire.types.Bundle);
+
     // Deletes a bundle. If the bundle does not exist, NOT_FOUND is returned.
+    // If the bundle is for the trust domain of the SPIRE server,
+    // INVALID_ARGUMENT is returned.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc DeleteBundle(DeleteBundleRequest) returns (google.protobuf.Empty);
 
-    // Batch deletes one or more bundles.
+    // Batch deletes one or more bundles. See DeleteBundle for details on
+    // the status codes that will be returned in the results.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc BatchDeleteBundle(BatchDeleteBundleRequest) returns (BatchDeleteBundleResponse);
 }
 
@@ -126,26 +168,16 @@ message SetBundleRequest {
     // Required. The bundle to create or update.
     spire.types.Bundle bundle = 1;
 
-    // An input mask indicating which bundle fields should be updated. If the
-    // bundle does not exist, the mask is ignored and the new bundle is created
-    // using all of the fields in bundle.
-    spire.types.BundleMask input_mask = 2;
-
     // An output mask indicating which bundle fields are set in the response.
-    spire.types.BundleMask output_mask = 3;
+    spire.types.BundleMask output_mask = 2;
 }
 
 message BatchSetBundleRequest {
     // The bundles to be upserted.
     repeated spire.types.Bundle bundle = 1;
 
-    // An input mask indicating which bundle fields should be updated. If the
-    // bundle does not exist, the mask is ignored and the new bundle is created
-    // using all of the fields in bundle.
-    spire.types.BundleMask input_mask = 2;
-
     // An output mask indicating which bundle fields are set in the response.
-    spire.types.BundleMask output_mask = 3;
+    spire.types.BundleMask output_mask = 2;
 }
 
 message BatchSetBundleResponse {
@@ -159,6 +191,14 @@ message BatchSetBundleResponse {
 
     // Result for each bundle in the request.
     repeated Result results = 1;
+}
+
+message AppendBundleRequest {
+    // Required. The bundle to append.
+    spire.types.Bundle bundle = 1;
+
+    // An output mask indicating which bundle fields are set in the response.
+    spire.types.BundleMask output_mask = 2;
 }
 
 message DeleteBundleRequest {

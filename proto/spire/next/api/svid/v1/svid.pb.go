@@ -26,20 +26,15 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type MintX509SVIDRequest struct {
-	// Required. SPIFFE ID of the X509-SVID.
-	SpiffeId string `protobuf:"bytes,1,opt,name=spiffe_id,json=spiffeId,proto3" json:"spiffe_id,omitempty"`
-	// Required. ASN.1 DER encoded CSR. The CSR is only used to convey the
-	// public key and prove possession of the private key. The rest of the CSR
-	// is ignored.
-	Csr []byte `protobuf:"bytes,2,opt,name=csr,proto3" json:"csr,omitempty"`
-	// TTL of the X509-SVID, in seconds. The server default will be used if
-	// unset. The TTL is advisory only. The actual lifetime of the X509-SVID
-	// may be lower depending on the remaining lifetime of the active SPIRE
-	// Server CA.
-	Ttl int32 `protobuf:"varint,3,opt,name=ttl,proto3" json:"ttl,omitempty"`
-	// DNS names to include as DNS SANs in the X509-SVID. If set, the first
-	// in the list is also set as the X509-SVID common name.
-	DnsNames             []string `protobuf:"bytes,4,rep,name=dns_names,json=dnsNames,proto3" json:"dns_names,omitempty"`
+	// Required. ASN.1 DER encoded CSR. The CSR is used to convey the public
+	// key and the SPIFFE ID (via the URI SAN). Only one URI SAN can be set.
+	// Optionally, the subject and any number of DNS SANs can also be set.
+	Csr []byte `protobuf:"bytes,1,opt,name=csr,proto3" json:"csr,omitempty"`
+	// The desired TTL of the X509-SVID, in seconds. The server default will be
+	// used if unset. The TTL is advisory only. The actual lifetime of the
+	// X509-SVID may be lower depending on the remaining lifetime of the active
+	// SPIRE Server CA.
+	Ttl                  int32    `protobuf:"varint,3,opt,name=ttl,proto3" json:"ttl,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -70,13 +65,6 @@ func (m *MintX509SVIDRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_MintX509SVIDRequest proto.InternalMessageInfo
 
-func (m *MintX509SVIDRequest) GetSpiffeId() string {
-	if m != nil {
-		return m.SpiffeId
-	}
-	return ""
-}
-
 func (m *MintX509SVIDRequest) GetCsr() []byte {
 	if m != nil {
 		return m.Csr
@@ -89,13 +77,6 @@ func (m *MintX509SVIDRequest) GetTtl() int32 {
 		return m.Ttl
 	}
 	return 0
-}
-
-func (m *MintX509SVIDRequest) GetDnsNames() []string {
-	if m != nil {
-		return m.DnsNames
-	}
-	return nil
 }
 
 type MintX509SVIDResponse struct {
@@ -144,10 +125,10 @@ type MintJWTSVIDRequest struct {
 	// Required. List of audience claims to include in the JWT-SVID. At least one must
 	// be set.
 	Audience []string `protobuf:"bytes,2,rep,name=audience,proto3" json:"audience,omitempty"`
-	// TTL of the JWT-SVID, in seconds. The server default will be used if
-	// unset. The TTL is advisory only. The actual lifetime of the JWT-SVID may
-	// be lower depending on the remaining lifetime of the active SPIRE Server
-	// CA.
+	// Desired TTL of the JWT-SVID, in seconds. The server default will be used
+	// if unset. The TTL is advisory only. The actual lifetime of the JWT-SVID
+	// may be lower depending on the remaining lifetime of the active SPIRE
+	// Server CA.
 	Ttl                  int32    `protobuf:"varint,3,opt,name=ttl,proto3" json:"ttl,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -240,40 +221,337 @@ func (m *MintJWTSVIDResponse) GetSvid() *svid.JWTSVID {
 	return nil
 }
 
+type NewX509SVIDRequest struct {
+	// Required. The entry ID for the identity being requested.
+	EntryId string `protobuf:"bytes,1,opt,name=entry_id,json=entryId,proto3" json:"entry_id,omitempty"`
+	// Required. The ASN.1 DER encoded Certificate Signing Request (CSR). The
+	// CSR is only used to convey the public key; other fields in the CSR are
+	// ignored. The X509-SVID attributes are determined by the entry.
+	Csr                  []byte   `protobuf:"bytes,2,opt,name=csr,proto3" json:"csr,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *NewX509SVIDRequest) Reset()         { *m = NewX509SVIDRequest{} }
+func (m *NewX509SVIDRequest) String() string { return proto.CompactTextString(m) }
+func (*NewX509SVIDRequest) ProtoMessage()    {}
+func (*NewX509SVIDRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a3513929f2a405cf, []int{4}
+}
+
+func (m *NewX509SVIDRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NewX509SVIDRequest.Unmarshal(m, b)
+}
+func (m *NewX509SVIDRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NewX509SVIDRequest.Marshal(b, m, deterministic)
+}
+func (m *NewX509SVIDRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NewX509SVIDRequest.Merge(m, src)
+}
+func (m *NewX509SVIDRequest) XXX_Size() int {
+	return xxx_messageInfo_NewX509SVIDRequest.Size(m)
+}
+func (m *NewX509SVIDRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_NewX509SVIDRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NewX509SVIDRequest proto.InternalMessageInfo
+
+func (m *NewX509SVIDRequest) GetEntryId() string {
+	if m != nil {
+		return m.EntryId
+	}
+	return ""
+}
+
+func (m *NewX509SVIDRequest) GetCsr() []byte {
+	if m != nil {
+		return m.Csr
+	}
+	return nil
+}
+
+type NewX509SVIDResponse struct {
+	// The newly issued X509-SVID.
+	Svid                 *svid.X509SVID `protobuf:"bytes,1,opt,name=svid,proto3" json:"svid,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *NewX509SVIDResponse) Reset()         { *m = NewX509SVIDResponse{} }
+func (m *NewX509SVIDResponse) String() string { return proto.CompactTextString(m) }
+func (*NewX509SVIDResponse) ProtoMessage()    {}
+func (*NewX509SVIDResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a3513929f2a405cf, []int{5}
+}
+
+func (m *NewX509SVIDResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NewX509SVIDResponse.Unmarshal(m, b)
+}
+func (m *NewX509SVIDResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NewX509SVIDResponse.Marshal(b, m, deterministic)
+}
+func (m *NewX509SVIDResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NewX509SVIDResponse.Merge(m, src)
+}
+func (m *NewX509SVIDResponse) XXX_Size() int {
+	return xxx_messageInfo_NewX509SVIDResponse.Size(m)
+}
+func (m *NewX509SVIDResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_NewX509SVIDResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NewX509SVIDResponse proto.InternalMessageInfo
+
+func (m *NewX509SVIDResponse) GetSvid() *svid.X509SVID {
+	if m != nil {
+		return m.Svid
+	}
+	return nil
+}
+
+type NewJWTSVIDRequest struct {
+	// Required. The entry ID of the identity being requested.
+	EntryId string `protobuf:"bytes,1,opt,name=entry_id,json=entryId,proto3" json:"entry_id,omitempty"`
+	// Required. List of audience claims to include in the JWT-SVID. At least
+	// one must be set.
+	Audience             []string `protobuf:"bytes,2,rep,name=audience,proto3" json:"audience,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *NewJWTSVIDRequest) Reset()         { *m = NewJWTSVIDRequest{} }
+func (m *NewJWTSVIDRequest) String() string { return proto.CompactTextString(m) }
+func (*NewJWTSVIDRequest) ProtoMessage()    {}
+func (*NewJWTSVIDRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a3513929f2a405cf, []int{6}
+}
+
+func (m *NewJWTSVIDRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NewJWTSVIDRequest.Unmarshal(m, b)
+}
+func (m *NewJWTSVIDRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NewJWTSVIDRequest.Marshal(b, m, deterministic)
+}
+func (m *NewJWTSVIDRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NewJWTSVIDRequest.Merge(m, src)
+}
+func (m *NewJWTSVIDRequest) XXX_Size() int {
+	return xxx_messageInfo_NewJWTSVIDRequest.Size(m)
+}
+func (m *NewJWTSVIDRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_NewJWTSVIDRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NewJWTSVIDRequest proto.InternalMessageInfo
+
+func (m *NewJWTSVIDRequest) GetEntryId() string {
+	if m != nil {
+		return m.EntryId
+	}
+	return ""
+}
+
+func (m *NewJWTSVIDRequest) GetAudience() []string {
+	if m != nil {
+		return m.Audience
+	}
+	return nil
+}
+
+type NewJWTSVIDResponse struct {
+	// The newly issued JWT-SVID
+	Svid                 *svid.JWTSVID `protobuf:"bytes,1,opt,name=svid,proto3" json:"svid,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
+}
+
+func (m *NewJWTSVIDResponse) Reset()         { *m = NewJWTSVIDResponse{} }
+func (m *NewJWTSVIDResponse) String() string { return proto.CompactTextString(m) }
+func (*NewJWTSVIDResponse) ProtoMessage()    {}
+func (*NewJWTSVIDResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a3513929f2a405cf, []int{7}
+}
+
+func (m *NewJWTSVIDResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NewJWTSVIDResponse.Unmarshal(m, b)
+}
+func (m *NewJWTSVIDResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NewJWTSVIDResponse.Marshal(b, m, deterministic)
+}
+func (m *NewJWTSVIDResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NewJWTSVIDResponse.Merge(m, src)
+}
+func (m *NewJWTSVIDResponse) XXX_Size() int {
+	return xxx_messageInfo_NewJWTSVIDResponse.Size(m)
+}
+func (m *NewJWTSVIDResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_NewJWTSVIDResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NewJWTSVIDResponse proto.InternalMessageInfo
+
+func (m *NewJWTSVIDResponse) GetSvid() *svid.JWTSVID {
+	if m != nil {
+		return m.Svid
+	}
+	return nil
+}
+
+type NewDownstreamX509CARequest struct {
+	// Required. The entry ID for the identity being requested.
+	EntryId string `protobuf:"bytes,1,opt,name=entry_id,json=entryId,proto3" json:"entry_id,omitempty"`
+	// Required. The ASN.1 DER encoded Certificate Signing Request (CSR). The
+	// CSR is only used to convey the public key; other fields in the CSR are
+	// ignored. The X509-SVID attributes are determined by the entry.
+	Csr                  []byte   `protobuf:"bytes,2,opt,name=csr,proto3" json:"csr,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *NewDownstreamX509CARequest) Reset()         { *m = NewDownstreamX509CARequest{} }
+func (m *NewDownstreamX509CARequest) String() string { return proto.CompactTextString(m) }
+func (*NewDownstreamX509CARequest) ProtoMessage()    {}
+func (*NewDownstreamX509CARequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a3513929f2a405cf, []int{8}
+}
+
+func (m *NewDownstreamX509CARequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NewDownstreamX509CARequest.Unmarshal(m, b)
+}
+func (m *NewDownstreamX509CARequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NewDownstreamX509CARequest.Marshal(b, m, deterministic)
+}
+func (m *NewDownstreamX509CARequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NewDownstreamX509CARequest.Merge(m, src)
+}
+func (m *NewDownstreamX509CARequest) XXX_Size() int {
+	return xxx_messageInfo_NewDownstreamX509CARequest.Size(m)
+}
+func (m *NewDownstreamX509CARequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_NewDownstreamX509CARequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NewDownstreamX509CARequest proto.InternalMessageInfo
+
+func (m *NewDownstreamX509CARequest) GetEntryId() string {
+	if m != nil {
+		return m.EntryId
+	}
+	return ""
+}
+
+func (m *NewDownstreamX509CARequest) GetCsr() []byte {
+	if m != nil {
+		return m.Csr
+	}
+	return nil
+}
+
+type NewDownstreamX509CAResponse struct {
+	// CA certificate and any intermediates part of the chain back to the root
+	// (DER encoded). The CA certificate is the first.
+	CaCertChain [][]byte `protobuf:"bytes,1,rep,name=ca_cert_chain,json=caCertChain,proto3" json:"ca_cert_chain,omitempty"`
+	// Root CA certificates (DER encoded).
+	RootCas              [][]byte `protobuf:"bytes,2,rep,name=root_cas,json=rootCas,proto3" json:"root_cas,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *NewDownstreamX509CAResponse) Reset()         { *m = NewDownstreamX509CAResponse{} }
+func (m *NewDownstreamX509CAResponse) String() string { return proto.CompactTextString(m) }
+func (*NewDownstreamX509CAResponse) ProtoMessage()    {}
+func (*NewDownstreamX509CAResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_a3513929f2a405cf, []int{9}
+}
+
+func (m *NewDownstreamX509CAResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_NewDownstreamX509CAResponse.Unmarshal(m, b)
+}
+func (m *NewDownstreamX509CAResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_NewDownstreamX509CAResponse.Marshal(b, m, deterministic)
+}
+func (m *NewDownstreamX509CAResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NewDownstreamX509CAResponse.Merge(m, src)
+}
+func (m *NewDownstreamX509CAResponse) XXX_Size() int {
+	return xxx_messageInfo_NewDownstreamX509CAResponse.Size(m)
+}
+func (m *NewDownstreamX509CAResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_NewDownstreamX509CAResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NewDownstreamX509CAResponse proto.InternalMessageInfo
+
+func (m *NewDownstreamX509CAResponse) GetCaCertChain() [][]byte {
+	if m != nil {
+		return m.CaCertChain
+	}
+	return nil
+}
+
+func (m *NewDownstreamX509CAResponse) GetRootCas() [][]byte {
+	if m != nil {
+		return m.RootCas
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*MintX509SVIDRequest)(nil), "spire.api.svid.v1.MintX509SVIDRequest")
 	proto.RegisterType((*MintX509SVIDResponse)(nil), "spire.api.svid.v1.MintX509SVIDResponse")
 	proto.RegisterType((*MintJWTSVIDRequest)(nil), "spire.api.svid.v1.MintJWTSVIDRequest")
 	proto.RegisterType((*MintJWTSVIDResponse)(nil), "spire.api.svid.v1.MintJWTSVIDResponse")
+	proto.RegisterType((*NewX509SVIDRequest)(nil), "spire.api.svid.v1.NewX509SVIDRequest")
+	proto.RegisterType((*NewX509SVIDResponse)(nil), "spire.api.svid.v1.NewX509SVIDResponse")
+	proto.RegisterType((*NewJWTSVIDRequest)(nil), "spire.api.svid.v1.NewJWTSVIDRequest")
+	proto.RegisterType((*NewJWTSVIDResponse)(nil), "spire.api.svid.v1.NewJWTSVIDResponse")
+	proto.RegisterType((*NewDownstreamX509CARequest)(nil), "spire.api.svid.v1.NewDownstreamX509CARequest")
+	proto.RegisterType((*NewDownstreamX509CAResponse)(nil), "spire.api.svid.v1.NewDownstreamX509CAResponse")
 }
 
 func init() { proto.RegisterFile("svid.proto", fileDescriptor_a3513929f2a405cf) }
 
 var fileDescriptor_a3513929f2a405cf = []byte{
-	// 354 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x92, 0x4d, 0x4f, 0x32, 0x31,
-	0x10, 0xc7, 0xb3, 0xc0, 0xf3, 0x04, 0x0a, 0x07, 0xad, 0x1e, 0xd6, 0xf5, 0xb2, 0x59, 0x15, 0xb9,
-	0xd8, 0x02, 0x86, 0x03, 0xe1, 0x66, 0x88, 0x09, 0x26, 0x7a, 0x58, 0x8d, 0x1a, 0x63, 0xb2, 0x59,
-	0xd8, 0xa2, 0x35, 0xd2, 0xad, 0x4c, 0x41, 0xfc, 0x80, 0x7e, 0x2f, 0xd3, 0x96, 0xd7, 0x80, 0xc1,
-	0xd3, 0x76, 0x66, 0xff, 0x33, 0xf3, 0x9b, 0x17, 0x84, 0x60, 0xcc, 0x13, 0x22, 0x87, 0xa9, 0x4a,
-	0xf1, 0x2e, 0x48, 0x3e, 0x64, 0x24, 0x96, 0x9c, 0x18, 0xef, 0xb8, 0xe6, 0x1d, 0x19, 0x17, 0x15,
-	0x6c, 0xa2, 0xa8, 0xfa, 0x92, 0x0c, 0xa8, 0xfe, 0x43, 0xdf, 0x3e, 0xd5, 0x22, 0xce, 0x3b, 0xde,
-	0x2c, 0x9a, 0x34, 0xaa, 0xcd, 0x85, 0x2a, 0x00, 0xb4, 0x77, 0xcd, 0x85, 0x7a, 0x6c, 0x54, 0x9b,
-	0xb7, 0xf7, 0x9d, 0x76, 0xc8, 0x3e, 0x46, 0x0c, 0x14, 0x3e, 0x44, 0x05, 0x90, 0xbc, 0xdf, 0x67,
-	0x11, 0x4f, 0x5c, 0xc7, 0x77, 0x2a, 0x85, 0x30, 0x6f, 0x1d, 0x9d, 0x04, 0xef, 0xa0, 0x6c, 0x0f,
-	0x86, 0x6e, 0xc6, 0x77, 0x2a, 0xa5, 0x50, 0x3f, 0xb5, 0x47, 0xa9, 0x77, 0x37, 0xeb, 0x3b, 0x95,
-	0x7f, 0xa1, 0x7e, 0xea, 0x04, 0x89, 0x80, 0x48, 0xc4, 0x03, 0x06, 0x6e, 0xce, 0xcf, 0xea, 0x04,
-	0x89, 0x80, 0x1b, 0x6d, 0x07, 0x97, 0x68, 0x7f, 0xb5, 0x28, 0xc8, 0x54, 0x00, 0xc3, 0x04, 0xe5,
-	0x34, 0x9a, 0x29, 0x58, 0xac, 0x7b, 0xc4, 0x76, 0x6e, 0xe0, 0x6d, 0xef, 0xf3, 0x08, 0xa3, 0x0b,
-	0x22, 0x84, 0x75, 0x9e, 0xab, 0x87, 0xbb, 0x3f, 0xb3, 0x7b, 0x28, 0x1f, 0x8f, 0x12, 0xce, 0x44,
-	0x8f, 0xb9, 0x19, 0x8b, 0x35, 0xb3, 0xd7, 0xbb, 0x08, 0xda, 0x76, 0x3a, 0xf3, 0x02, 0x53, 0xce,
-	0xb3, 0x15, 0xce, 0x83, 0x75, 0xce, 0x59, 0x80, 0x91, 0xd5, 0xbf, 0x1d, 0x94, 0xd3, 0x26, 0x8e,
-	0x50, 0x69, 0xb9, 0x6f, 0x5c, 0x26, 0x6b, 0xbb, 0x25, 0x1b, 0xb6, 0xe1, 0x9d, 0x6e, 0xd5, 0x4d,
-	0xc1, 0x9e, 0x51, 0x71, 0x89, 0x17, 0x9f, 0xfc, 0x12, 0xb7, 0x3a, 0x30, 0xaf, 0xbc, 0x4d, 0x66,
-	0xb3, 0x5f, 0xb4, 0x9e, 0x9a, 0x2f, 0x5c, 0xbd, 0x8e, 0xba, 0xa4, 0x97, 0x0e, 0xa8, 0x1d, 0x29,
-	0xb5, 0x57, 0x66, 0x8e, 0x89, 0x2e, 0x5d, 0x5c, 0x2c, 0xb9, 0xbd, 0xb7, 0x71, 0xad, 0xa5, 0xbf,
-	0xdd, 0xff, 0x46, 0x72, 0xfe, 0x13, 0x00, 0x00, 0xff, 0xff, 0xe8, 0xcc, 0x32, 0x2f, 0xdb, 0x02,
-	0x00, 0x00,
+	// 505 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x54, 0xcf, 0x4f, 0xdb, 0x30,
+	0x18, 0x55, 0x09, 0x1b, 0xe5, 0x6b, 0x27, 0x0d, 0xb3, 0x43, 0x09, 0x97, 0x2a, 0x03, 0xd6, 0x0b,
+	0x0e, 0x30, 0x71, 0xa8, 0x38, 0xb1, 0x74, 0x93, 0x8a, 0xb4, 0x1e, 0xb2, 0x69, 0xbf, 0x84, 0x14,
+	0x99, 0xd4, 0x0c, 0x4f, 0x23, 0xc9, 0x6c, 0xb7, 0x81, 0xff, 0x7b, 0x7f, 0xc0, 0x64, 0x3b, 0x6d,
+	0xd2, 0xd6, 0xd0, 0xa9, 0x9c, 0x12, 0x7f, 0x79, 0xef, 0xf9, 0xf9, 0xe5, 0xf3, 0x07, 0x20, 0xc6,
+	0x6c, 0x88, 0x33, 0x9e, 0xca, 0x14, 0x6d, 0x89, 0x8c, 0x71, 0x8a, 0x49, 0xc6, 0xb0, 0xae, 0x8e,
+	0x8f, 0xdd, 0xd7, 0xba, 0xe4, 0x27, 0xf4, 0x4e, 0xfa, 0xf2, 0x3e, 0xa3, 0xc2, 0x57, 0x5f, 0xfc,
+	0x5f, 0xb9, 0x2c, 0x79, 0xee, 0x9e, 0x1d, 0x74, 0x77, 0x7a, 0xd4, 0x2d, 0x51, 0x5e, 0x17, 0xb6,
+	0x3f, 0xb2, 0x44, 0x7e, 0x3b, 0x3d, 0xea, 0x7e, 0xfa, 0xd2, 0xef, 0x85, 0xf4, 0xcf, 0x88, 0x0a,
+	0x89, 0x5e, 0x82, 0x13, 0x0b, 0xde, 0xaa, 0xb5, 0x6b, 0x9d, 0x66, 0xa8, 0x5e, 0x55, 0x45, 0xca,
+	0xdf, 0x2d, 0xa7, 0x5d, 0xeb, 0x3c, 0x0b, 0xd5, 0xab, 0xf7, 0x01, 0x5e, 0xcd, 0x52, 0x45, 0x96,
+	0x26, 0x82, 0x22, 0x0c, 0xeb, 0x6a, 0x03, 0x4d, 0x6e, 0x9c, 0xb8, 0xd8, 0xf8, 0xd7, 0x16, 0xcc,
+	0x09, 0xa6, 0x0c, 0x8d, 0xf3, 0x22, 0x40, 0x4a, 0xe7, 0xe2, 0xeb, 0xe7, 0xaa, 0x83, 0x5d, 0xd8,
+	0x14, 0x19, 0xbb, 0xbe, 0xa6, 0x51, 0x21, 0xb5, 0x19, 0xd6, 0x4d, 0xa1, 0x3f, 0x44, 0x2e, 0xd4,
+	0xc9, 0x68, 0xc8, 0x68, 0x12, 0xd3, 0xd6, 0x5a, 0xdb, 0x51, 0xdf, 0x26, 0x6b, 0x8b, 0xd1, 0x9e,
+	0x39, 0xe3, 0x74, 0x83, 0xc2, 0xe7, 0xe1, 0x8c, 0xcf, 0x9d, 0x45, 0x9f, 0x13, 0x82, 0xb1, 0x79,
+	0x0e, 0x68, 0x40, 0xf3, 0xf9, 0xa0, 0x76, 0xa0, 0x4e, 0x13, 0xc9, 0xef, 0x4b, 0x97, 0x1b, 0x7a,
+	0xdd, 0x1f, 0x4e, 0x32, 0x5c, 0x9b, 0x66, 0xe8, 0xbd, 0x87, 0xed, 0x19, 0x89, 0x15, 0x03, 0xbb,
+	0x80, 0xad, 0x01, 0xcd, 0xe7, 0xf2, 0x7a, 0xc4, 0xc8, 0x23, 0x69, 0x79, 0x81, 0x3e, 0xd5, 0x13,
+	0xa3, 0xe9, 0x83, 0x3b, 0xa0, 0x79, 0x2f, 0xcd, 0x13, 0x21, 0x39, 0x25, 0xb7, 0xca, 0x6f, 0x70,
+	0xbe, 0x52, 0x44, 0x97, 0xb0, 0x6b, 0x95, 0x2a, 0x8c, 0x79, 0xf0, 0x22, 0x26, 0x51, 0x4c, 0xb9,
+	0x8c, 0xe2, 0x1b, 0xc2, 0x92, 0x56, 0xad, 0xed, 0x74, 0x9a, 0x61, 0x23, 0x26, 0x01, 0xe5, 0x32,
+	0x50, 0x25, 0xb5, 0x1f, 0x4f, 0x53, 0x19, 0xc5, 0x44, 0xe8, 0xe3, 0x36, 0xc3, 0x0d, 0xb5, 0x0e,
+	0x88, 0x38, 0xf9, 0xeb, 0xc0, 0xba, 0xf2, 0x8d, 0x22, 0x68, 0x56, 0x7b, 0x17, 0x1d, 0xe0, 0x85,
+	0x5b, 0x86, 0x2d, 0xf7, 0xc2, 0x7d, 0xb3, 0x14, 0x57, 0x18, 0xbd, 0x84, 0x46, 0xa5, 0xe7, 0xd0,
+	0xfe, 0x03, 0xbc, 0xd9, 0x9f, 0xe8, 0x1e, 0x2c, 0x83, 0x95, 0xea, 0x95, 0x46, 0xb2, 0xaa, 0x2f,
+	0xf6, 0xaa, 0x55, 0xdd, 0xd6, 0x8f, 0xdf, 0x01, 0xca, 0x9e, 0x40, 0x7b, 0x76, 0xd6, 0x9c, 0xf3,
+	0xfd, 0x25, 0xa8, 0x42, 0x5a, 0xea, 0x1b, 0x30, 0xff, 0x7b, 0xd1, 0xa1, 0x9d, 0xfd, 0x40, 0x47,
+	0xb9, 0xf8, 0x7f, 0xe1, 0x66, 0xd7, 0x77, 0x67, 0x3f, 0xba, 0x3f, 0x99, 0xbc, 0x19, 0x5d, 0xe1,
+	0x38, 0xbd, 0xf5, 0xcd, 0x14, 0xf1, 0xcd, 0x78, 0xd4, 0x53, 0xd0, 0xaf, 0x8c, 0x4a, 0x92, 0x31,
+	0x33, 0x28, 0xc7, 0xc7, 0x67, 0xea, 0x79, 0xf5, 0x5c, 0x43, 0xde, 0xfe, 0x0b, 0x00, 0x00, 0xff,
+	0xff, 0x8d, 0x41, 0xa0, 0xb2, 0x94, 0x05, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -289,9 +567,28 @@ const _ = grpc.SupportPackageIsVersion4
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type SVIDClient interface {
 	// MintX509SVID creates an X509-SVID.
+	//
+	// The caller must be local or present an admin X509-SVID.
 	MintX509SVID(ctx context.Context, in *MintX509SVIDRequest, opts ...grpc.CallOption) (*MintX509SVIDResponse, error)
-	// MintX509SVID creates an JWT-SVID.
+	// MintJWTSVID creates an JWT-SVID.
+	//
+	// The caller must be local or present an admin X509-SVID.
 	MintJWTSVID(ctx context.Context, in *MintJWTSVIDRequest, opts ...grpc.CallOption) (*MintJWTSVIDResponse, error)
+	// Creates an X509-SVID. The caller must be authorized for the given entry.
+	//
+	// The caller must present an active agent X509-SVID that is authorized
+	// to mint the requested entry. See the Entry GetAuthorizedEntries RPC.
+	NewX509SVID(ctx context.Context, in *NewX509SVIDRequest, opts ...grpc.CallOption) (*NewX509SVIDResponse, error)
+	// Creates an JWT-SVID. The caller must be authorized for the given entry.
+	//
+	// The caller must present an active agent X509-SVID that is authorized
+	// to mint the requested entry. See the Entry GetAuthorizedEntries RPC.
+	NewJWTSVID(ctx context.Context, in *NewJWTSVIDRequest, opts ...grpc.CallOption) (*NewJWTSVIDResponse, error)
+	// Creates an X509 CA certificate appropriate for use by a downstream
+	// entity to mint X509-SVIDs.
+	//
+	// The caller must present a downstream X509-SVID.
+	NewDownstreamX509CA(ctx context.Context, in *NewDownstreamX509CARequest, opts ...grpc.CallOption) (*NewDownstreamX509CAResponse, error)
 }
 
 type sVIDClient struct {
@@ -320,12 +617,58 @@ func (c *sVIDClient) MintJWTSVID(ctx context.Context, in *MintJWTSVIDRequest, op
 	return out, nil
 }
 
+func (c *sVIDClient) NewX509SVID(ctx context.Context, in *NewX509SVIDRequest, opts ...grpc.CallOption) (*NewX509SVIDResponse, error) {
+	out := new(NewX509SVIDResponse)
+	err := c.cc.Invoke(ctx, "/spire.api.svid.v1.SVID/NewX509SVID", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sVIDClient) NewJWTSVID(ctx context.Context, in *NewJWTSVIDRequest, opts ...grpc.CallOption) (*NewJWTSVIDResponse, error) {
+	out := new(NewJWTSVIDResponse)
+	err := c.cc.Invoke(ctx, "/spire.api.svid.v1.SVID/NewJWTSVID", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sVIDClient) NewDownstreamX509CA(ctx context.Context, in *NewDownstreamX509CARequest, opts ...grpc.CallOption) (*NewDownstreamX509CAResponse, error) {
+	out := new(NewDownstreamX509CAResponse)
+	err := c.cc.Invoke(ctx, "/spire.api.svid.v1.SVID/NewDownstreamX509CA", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SVIDServer is the server API for SVID service.
 type SVIDServer interface {
 	// MintX509SVID creates an X509-SVID.
+	//
+	// The caller must be local or present an admin X509-SVID.
 	MintX509SVID(context.Context, *MintX509SVIDRequest) (*MintX509SVIDResponse, error)
-	// MintX509SVID creates an JWT-SVID.
+	// MintJWTSVID creates an JWT-SVID.
+	//
+	// The caller must be local or present an admin X509-SVID.
 	MintJWTSVID(context.Context, *MintJWTSVIDRequest) (*MintJWTSVIDResponse, error)
+	// Creates an X509-SVID. The caller must be authorized for the given entry.
+	//
+	// The caller must present an active agent X509-SVID that is authorized
+	// to mint the requested entry. See the Entry GetAuthorizedEntries RPC.
+	NewX509SVID(context.Context, *NewX509SVIDRequest) (*NewX509SVIDResponse, error)
+	// Creates an JWT-SVID. The caller must be authorized for the given entry.
+	//
+	// The caller must present an active agent X509-SVID that is authorized
+	// to mint the requested entry. See the Entry GetAuthorizedEntries RPC.
+	NewJWTSVID(context.Context, *NewJWTSVIDRequest) (*NewJWTSVIDResponse, error)
+	// Creates an X509 CA certificate appropriate for use by a downstream
+	// entity to mint X509-SVIDs.
+	//
+	// The caller must present a downstream X509-SVID.
+	NewDownstreamX509CA(context.Context, *NewDownstreamX509CARequest) (*NewDownstreamX509CAResponse, error)
 }
 
 // UnimplementedSVIDServer can be embedded to have forward compatible implementations.
@@ -337,6 +680,15 @@ func (*UnimplementedSVIDServer) MintX509SVID(ctx context.Context, req *MintX509S
 }
 func (*UnimplementedSVIDServer) MintJWTSVID(ctx context.Context, req *MintJWTSVIDRequest) (*MintJWTSVIDResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MintJWTSVID not implemented")
+}
+func (*UnimplementedSVIDServer) NewX509SVID(ctx context.Context, req *NewX509SVIDRequest) (*NewX509SVIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewX509SVID not implemented")
+}
+func (*UnimplementedSVIDServer) NewJWTSVID(ctx context.Context, req *NewJWTSVIDRequest) (*NewJWTSVIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewJWTSVID not implemented")
+}
+func (*UnimplementedSVIDServer) NewDownstreamX509CA(ctx context.Context, req *NewDownstreamX509CARequest) (*NewDownstreamX509CAResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewDownstreamX509CA not implemented")
 }
 
 func RegisterSVIDServer(s *grpc.Server, srv SVIDServer) {
@@ -379,6 +731,60 @@ func _SVID_MintJWTSVID_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SVID_NewX509SVID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewX509SVIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SVIDServer).NewX509SVID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/spire.api.svid.v1.SVID/NewX509SVID",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SVIDServer).NewX509SVID(ctx, req.(*NewX509SVIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SVID_NewJWTSVID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewJWTSVIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SVIDServer).NewJWTSVID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/spire.api.svid.v1.SVID/NewJWTSVID",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SVIDServer).NewJWTSVID(ctx, req.(*NewJWTSVIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SVID_NewDownstreamX509CA_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewDownstreamX509CARequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SVIDServer).NewDownstreamX509CA(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/spire.api.svid.v1.SVID/NewDownstreamX509CA",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SVIDServer).NewDownstreamX509CA(ctx, req.(*NewDownstreamX509CARequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _SVID_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "spire.api.svid.v1.SVID",
 	HandlerType: (*SVIDServer)(nil),
@@ -390,6 +796,18 @@ var _SVID_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MintJWTSVID",
 			Handler:    _SVID_MintJWTSVID_Handler,
+		},
+		{
+			MethodName: "NewX509SVID",
+			Handler:    _SVID_NewX509SVID_Handler,
+		},
+		{
+			MethodName: "NewJWTSVID",
+			Handler:    _SVID_NewJWTSVID_Handler,
+		},
+		{
+			MethodName: "NewDownstreamX509CA",
+			Handler:    _SVID_NewDownstreamX509CA_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

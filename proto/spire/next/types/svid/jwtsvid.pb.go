@@ -5,9 +5,8 @@ package svid
 
 import (
 	fmt "fmt"
-	math "math"
-
 	proto "github.com/golang/protobuf/proto"
+	math "math"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -24,11 +23,11 @@ const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 // JWT SPIFFE Verifiable Identity Document. It contains the raw JWT token
 // as well as a few denormalized fields for convenience.
 type JWTSVID struct {
-	// JWT token
+	// The serialized JWT token.
 	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	// Expiration timestamp (seconds since Unix epoch)
+	// Expiration timestamp (seconds since Unix epoch).
 	ExpiresAt int64 `protobuf:"varint,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	// Issuance timestamp (seconds since Unix epoch)
+	// Issuance timestamp (seconds since Unix epoch).
 	IssuedAt             int64    `protobuf:"varint,3,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`

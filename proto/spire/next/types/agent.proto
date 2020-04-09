@@ -5,20 +5,23 @@ option go_package = "github.com/spiffe/spire/proto/spire/next/types";
 import "spire/next/types/selector.proto";
 
 message Agent {
-    // SPIFFE ID of the agent.
+    // Output only. SPIFFE ID of the agent.
     string id = 1;
 
-    // The method by which the agent attested.
+    // Output only. The method by which the agent attested.
     string attestation_type = 2;
 
-    // The X509-SVID serial number.
+    // Output only. The X509-SVID serial number.
     string x509svid_serial_number = 3;
 
-    // The X509-SVID expiration (seconds since Unix epoch).
+    // Output only. The X509-SVID expiration (seconds since Unix epoch).
     int64 x509svid_expires_at = 4;
 
-    // The selectors attributed to the agent during attestation.
+    // Output only. The selectors attributed to the agent during attestation.
     repeated spire.types.Selector selectors = 5;
+
+    // Output only. Whether or not the agent is banned.
+    bool banned = 6;
 }
 
 message AgentMask {
@@ -27,4 +30,5 @@ message AgentMask {
     bool x509svid_serial_number = 3;
     bool x509svid_expires_at = 4;
     bool selectors = 5;
+    bool banned = 6;
 }

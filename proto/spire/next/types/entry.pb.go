@@ -25,7 +25,7 @@ type Entry struct {
 	Id string `protobuf:"bytes,6,opt,name=id,proto3" json:"id,omitempty"`
 	// The SPIFFE ID of the identity described by this entry.
 	SpiffeId string `protobuf:"bytes,3,opt,name=spiffe_id,json=spiffeId,proto3" json:"spiffe_id,omitempty"`
-	// TODO: Who the entry is delegated to. If the entry describes a node, this is
+	// Who the entry is delegated to. If the entry describes a node, this is
 	// set to the SPIFFE ID of the SPIRE server of the trust domain (e.g.
 	// spiffe://example.org/spire/server). Otherwise, it will be set to a node
 	// SPIFFE ID.

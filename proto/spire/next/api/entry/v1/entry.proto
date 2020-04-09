@@ -10,34 +10,58 @@ import "spire/next/types/status.proto";
 // Manages registration entries stored by the SPIRE Server.
 service Entry {
     // Lists entries.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc ListEntries(ListEntriesRequest) returns (ListEntriesResponse);
 
     // Gets an entry. If the entry does not exist, NOT_FOUND is returned.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc GetEntry(GetEntryRequest) returns (spire.types.Entry);
 
     // Creates an entry. If a similar already exists, ALREADY_EXISTS is
     // returned.  An entry is similar if it has the same spiffe_id, parent_id,
     // and selectors.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc CreateEntry(CreateEntryRequest) returns (spire.types.Entry);
 
     // Batch creates one or more entries.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc BatchCreateEntry(BatchCreateEntryRequest) returns (BatchCreateEntryResponse);
 
     // Creates an entry if a similar entry does not already exist. An entry is
     // similar if it has the same spiffe_id, parent_id, and selectors.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc CreateEntryIfNotExists(CreateEntryIfNotExistsRequest) returns (CreateEntryIfNotExistsResponse);
 
     // Updates an entry. If the entry does not exist, NOT_FOUND is returned.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc UpdateEntry(UpdateEntryRequest) returns (spire.types.Entry);
 
     // Batch updates one or more entries.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc BatchUpdateEntry(BatchUpdateEntryRequest) returns (BatchUpdateEntryResponse);
 
     // Deletes an entry. If the entry does not exist, NOT_FOUND is returned.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc DeleteEntry(DeleteEntryRequest) returns (google.protobuf.Empty);
 
     // Batch deletes one or more entries.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc BatchDeleteEntry(BatchDeleteEntryRequest) returns (BatchDeleteEntryResponse);
+
+    // Gets the entries the caller is authorized for.
+    //
+    // The caller must present an active agent X509-SVID. See the Agent
+    // AttestAgent/RenewAgent RPCs.
+    rpc GetAuthorizedEntries(GetAuthorizedEntriesRequest) returns (GetAuthorizedEntriesResponse);
 }
 
 message ListEntriesRequest {
@@ -191,4 +215,14 @@ message BatchDeleteEntryResponse {
 
     // Result for each entry in the request.
     repeated Result results = 1;
+}
+
+message GetAuthorizedEntriesRequest {
+    // An output mask indicating which fields are set in the response.
+    spire.types.EntryMask output_mask = 1;
+}
+
+message GetAuthorizedEntriesResponse {
+    // The authorized entries.
+    repeated spire.types.Entry entries = 1;
 }

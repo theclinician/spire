@@ -11,7 +11,7 @@ message Entry {
     // The SPIFFE ID of the identity described by this entry.
     string spiffe_id = 3;
 
-    // TODO: Who the entry is delegated to. If the entry describes a node, this is
+    // Who the entry is delegated to. If the entry describes a node, this is
     // set to the SPIFFE ID of the SPIRE server of the trust domain (e.g.
     // spiffe://example.org/spire/server). Otherwise, it will be set to a node
     // SPIFFE ID.

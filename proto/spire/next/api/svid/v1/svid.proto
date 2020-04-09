@@ -7,30 +7,45 @@ import "spire/next/types/svid/x509svid.proto";
 
 service SVID {
     // MintX509SVID creates an X509-SVID.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc MintX509SVID(MintX509SVIDRequest) returns (MintX509SVIDResponse);
 
-    // MintX509SVID creates an JWT-SVID.
+    // MintJWTSVID creates an JWT-SVID.
+    //
+    // The caller must be local or present an admin X509-SVID.
     rpc MintJWTSVID(MintJWTSVIDRequest) returns (MintJWTSVIDResponse);
+
+    // Creates an X509-SVID. The caller must be authorized for the given entry.
+    //
+    // The caller must present an active agent X509-SVID that is authorized
+    // to mint the requested entry. See the Entry GetAuthorizedEntries RPC.
+    rpc NewX509SVID(NewX509SVIDRequest) returns (NewX509SVIDResponse);
+
+    // Creates an JWT-SVID. The caller must be authorized for the given entry.
+    //
+    // The caller must present an active agent X509-SVID that is authorized
+    // to mint the requested entry. See the Entry GetAuthorizedEntries RPC.
+    rpc NewJWTSVID(NewJWTSVIDRequest) returns (NewJWTSVIDResponse);
+
+    // Creates an X509 CA certificate appropriate for use by a downstream
+    // entity to mint X509-SVIDs.
+    //
+    // The caller must present a downstream X509-SVID.
+    rpc NewDownstreamX509CA(NewDownstreamX509CARequest) returns (NewDownstreamX509CAResponse);
 }
 
 message MintX509SVIDRequest {
-    // Required. SPIFFE ID of the X509-SVID.
-    string spiffe_id = 1;
+    // Required. ASN.1 DER encoded CSR. The CSR is used to convey the public
+    // key and the SPIFFE ID (via the URI SAN). Only one URI SAN can be set.
+    // Optionally, the subject and any number of DNS SANs can also be set.
+    bytes csr = 1;
 
-    // Required. ASN.1 DER encoded CSR. The CSR is only used to convey the
-    // public key and prove possession of the private key. The rest of the CSR
-    // is ignored.
-    bytes csr = 2;
-
-    // TTL of the X509-SVID, in seconds. The server default will be used if
-    // unset. The TTL is advisory only. The actual lifetime of the X509-SVID
-    // may be lower depending on the remaining lifetime of the active SPIRE
-    // Server CA.
+    // The desired TTL of the X509-SVID, in seconds. The server default will be
+    // used if unset. The TTL is advisory only. The actual lifetime of the
+    // X509-SVID may be lower depending on the remaining lifetime of the active
+    // SPIRE Server CA.
     int32 ttl = 3;
-
-    // DNS names to include as DNS SANs in the X509-SVID. If set, the first
-    // in the list is also set as the X509-SVID common name.
-    repeated string dns_names = 4;
 }
 
 message MintX509SVIDResponse {
@@ -46,14 +61,62 @@ message MintJWTSVIDRequest {
     // be set.
     repeated string audience = 2;
 
-    // TTL of the JWT-SVID, in seconds. The server default will be used if
-    // unset. The TTL is advisory only. The actual lifetime of the JWT-SVID may
-    // be lower depending on the remaining lifetime of the active SPIRE Server
-    // CA.
+    // Desired TTL of the JWT-SVID, in seconds. The server default will be used
+    // if unset. The TTL is advisory only. The actual lifetime of the JWT-SVID
+    // may be lower depending on the remaining lifetime of the active SPIRE
+    // Server CA.
     int32 ttl = 3;
 }
 
 message MintJWTSVIDResponse {
     // The newly issued JWT-SVID.
     spire.types.svid.JWTSVID svid = 1;
+}
+
+message NewX509SVIDRequest {
+    // Required. The entry ID for the identity being requested.
+    string entry_id = 1;
+
+    // Required. The ASN.1 DER encoded Certificate Signing Request (CSR). The
+    // CSR is only used to convey the public key; other fields in the CSR are
+    // ignored. The X509-SVID attributes are determined by the entry.
+    bytes csr = 2;
+}
+
+message NewX509SVIDResponse {
+    // The newly issued X509-SVID.
+    spire.types.svid.X509SVID svid = 1;
+}
+
+message NewJWTSVIDRequest {
+    // Required. The entry ID of the identity being requested.
+    string entry_id = 1;
+
+    // Required. List of audience claims to include in the JWT-SVID. At least
+    // one must be set.
+    repeated string audience = 2;
+}
+
+message NewJWTSVIDResponse {
+    // The newly issued JWT-SVID
+    spire.types.svid.JWTSVID svid = 1;
+}
+
+message NewDownstreamX509CARequest {
+    // Required. The entry ID for the identity being requested.
+    string entry_id = 1;
+
+    // Required. The ASN.1 DER encoded Certificate Signing Request (CSR). The
+    // CSR is only used to convey the public key; other fields in the CSR are
+    // ignored. The X509-SVID attributes are determined by the entry.
+    bytes csr = 2;
+}
+
+message NewDownstreamX509CAResponse {
+    // CA certificate and any intermediates part of the chain back to the root
+    // (DER encoded). The CA certificate is the first. 
+    repeated bytes ca_cert_chain = 1;
+
+    // Root CA certificates (DER encoded).
+    repeated bytes root_cas = 2;
 }
