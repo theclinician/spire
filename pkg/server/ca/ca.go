@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"sync"
 	"time"
+	"net"
 
 	"github.com/andres-erbsen/clock"
 	"github.com/sirupsen/logrus"
@@ -77,6 +78,9 @@ type X509SVIDParams struct {
 	// DNSList is used to add DNS SAN's to the X509 SVID. The first entry
 	// is also added as the CN.
 	DNSList []string
+
+	// IPList is used to add IP SAN's to the X509 SVID.
+	IPList []string
 }
 
 // X509CASVIDParams are parameters relevant to X509 CA SVID creation
@@ -256,6 +260,18 @@ func (ca *CA) signX509SVID(params X509SVIDParams, x509CA *X509CA) ([]*x509.Certi
 		template.Subject.CommonName = params.DNSList[0]
 		template.DNSNames = params.DNSList
 	}
+
+	if len(params.IPList) > 0 {
+		var netIps []net.IP
+		for _, v := range params.IPList {
+			netIps = append(netIps, net.ParseIP(v))
+		}
+
+		fmt.Println(netIps)
+
+		template.IPAddresses = netIps
+	}
+
 
 	cert, err := createCertificate(template, x509CA.Certificate, template.PublicKey, x509CA.Signer)
 	if err != nil {

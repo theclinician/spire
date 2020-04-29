@@ -637,6 +637,7 @@ func (h *Handler) MintX509SVID(ctx context.Context, req *registration.MintX509SV
 		PublicKey: csr.PublicKey,
 		TTL:       time.Duration(req.Ttl) * time.Second,
 		DNSList:   req.DnsNames,
+		IPList:    req.IPAddresses,
 	})
 	if err != nil {
 		log.WithError(err).Error("Failed to sign X.509 SVID")

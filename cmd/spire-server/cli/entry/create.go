@@ -48,6 +48,9 @@ type CreateConfig struct {
 
 	// DNSNames entries for SVIDs based on this entry
 	DNSNames StringsFlag
+
+	// IPAddresses entries for SVIDs based on this entry
+	IPAddresses StringsFlag
 }
 
 // Validate performs basic validation, even on fields that we
@@ -165,6 +168,7 @@ func (c CreateCLI) parseConfig(config *CreateConfig) ([]*common.RegistrationEntr
 		Downstream:  config.Downstream,
 		EntryExpiry: config.EntryExpiry,
 		DnsNames:    config.DNSNames,
+		IPAddresses: config.IPAddresses,
 	}
 
 	// If the node flag is set, then set the Parent ID to the server's expected SPIFFE ID
@@ -244,6 +248,7 @@ func (CreateCLI) newConfig(args []string) (*CreateConfig, error) {
 	f.Int64Var(&c.EntryExpiry, "entryExpiry", 0, "An expiry, from epoch in seconds, for the resulting registration entry to be pruned")
 
 	f.Var(&c.DNSNames, "dns", "A DNS name that will be included in SVIDs issued based on this entry, where appropriate. Can be used more than once")
+	f.Var(&c.IPAddresses, "ip", "An IP Address that will be included in SVIDs issued based on this entry, where appropriate. Can be used more than once")
 
 	return c, f.Parse(args)
 }

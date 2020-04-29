@@ -1082,6 +1082,7 @@ func (h *Handler) buildSVID(ctx context.Context, id string, csr *CSR, regEntries
 		PublicKey: csr.PublicKey,
 		TTL:       time.Duration(entry.Ttl) * time.Second,
 		DNSList:   entry.DnsNames,
+		IPList:    entry.IPAddresses,
 	})
 	if err != nil {
 		return nil, err

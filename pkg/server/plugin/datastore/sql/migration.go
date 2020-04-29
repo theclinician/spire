@@ -178,6 +178,7 @@ func initDB(db *gorm.DB, dbType string, log hclog.Logger) (err error) {
 		&Selector{},
 		&Migration{},
 		&DNSName{},
+		&IPAddress{},
 	}
 
 	if err := tableOptionsForDialect(tx, dbType).AutoMigrate(tables...).Error; err != nil {
@@ -616,6 +617,7 @@ type V8RegisteredEntry struct {
 	Expiry int64
 	// (optional) DNS entries
 	DNSList []DNSName
+	IPAddressList []IPAddress
 }
 
 // TableName gets table name for v8 registered entry
@@ -639,6 +641,7 @@ type V9RegisteredEntry struct {
 	Expiry int64
 	// (optional) DNS entries
 	DNSList []DNSName
+	IPAddressList []IPAddress
 }
 
 // TableName gets table name for v9 registered entry
@@ -663,6 +666,7 @@ type V10RegisteredEntry struct {
 	Expiry int64 `gorm:"index"`
 	// (optional) DNS entries
 	DNSList []DNSName
+	IPAddressList []IPAddress
 }
 
 // TableName gets table name for v10 registered entry

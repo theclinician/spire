@@ -1168,6 +1168,17 @@ func createRegistrationEntry(tx *gorm.DB, req *datastore.CreateRegistrationEntry
 		}
 	}
 
+	for _, registeredIPAddress := range req.Entry.IPAddresses {
+		newIPAddress := IPAddress{
+			RegisteredEntryID: newRegisteredEntry.ID,
+			Value:             registeredIPAddress,
+		}
+
+		if err := tx.Create(&newIPAddress).Error; err != nil {
+			return nil, sqlError.Wrap(err)
+		}
+	}
+
 	entry, err := modelToEntry(tx, newRegisteredEntry)
 	if err != nil {
 		return nil, err
@@ -1253,7 +1264,9 @@ SELECT
 	NULL AS selector_value,
 	NULL AS trust_domain,
 	NULL AS dns_name_id,
-	NULL AS dns_name
+	NULL AS dns_name,
+	NULL AS ip_address_id,
+	NULL AS ip_address
 FROM
 	registered_entries
 WHERE id IN (SELECT id FROM listing)
@@ -1261,7 +1274,7 @@ WHERE id IN (SELECT id FROM listing)
 UNION
 
 SELECT
-	F.registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, B.trust_domain, NULL, NULL
+	F.registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, B.trust_domain, NULL, NULL, NULL, NULL
 FROM
 	bundles B
 INNER JOIN
@@ -1274,7 +1287,7 @@ WHERE
 UNION
 
 SELECT
-	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
+	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value, NULL, NULL
 FROM
 	dns_names
 WHERE registered_entry_id IN (SELECT id FROM listing)
@@ -1282,12 +1295,20 @@ WHERE registered_entry_id IN (SELECT id FROM listing)
 UNION
 
 SELECT
-	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, type, value, NULL, NULL, NULL
+	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
+FROM
+	ip_addresses
+WHERE registered_entry_id IN (SELECT id FROM listing)
+
+UNION
+
+SELECT
+	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, type, value, NULL, NULL, NULL, NULL, NULL
 FROM
 	selectors
 WHERE registered_entry_id IN (SELECT id FROM listing)
 
-ORDER BY selector_id, dns_name_id
+ORDER BY selector_id, dns_name_id, ip_address_id
 ;`
 	return query, []interface{}{req.EntryId}, nil
 }
@@ -1311,7 +1332,9 @@ SELECT
 	NULL AS selector_value,
 	NULL AS trust_domain,
 	NULL ::integer AS dns_name_id,
-	NULL AS dns_name
+	NULL AS dns_name,
+	NULL ::integer AS ip_address_id,
+	NULL AS ip_address
 FROM
 	registered_entries
 WHERE id IN (SELECT id FROM listing)
@@ -1335,6 +1358,14 @@ SELECT
 	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
 FROM
 	dns_names
+WHERE registered_entry_id IN (SELECT id FROM listing)
+
+UNION
+
+SELECT
+	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
+FROM
+	ip_addresses
 WHERE registered_entry_id IN (SELECT id FROM listing)
 
 UNION
@@ -1367,6 +1398,8 @@ SELECT
 	B.trust_domain,
 	D.id AS dns_name_id,
 	D.value AS dns_name
+	I.id AS ip_address_id,
+	I.value AS ip_address
 FROM
 	registered_entries E
 LEFT JOIN
@@ -1375,6 +1408,8 @@ LEFT JOIN
 	selectors S ON joinItem=1 AND E.id=S.registered_entry_id
 LEFT JOIN
 	dns_names D ON joinItem=2 AND E.id=D.registered_entry_id
+LEFT JOIN
+	ip_addresses I ON joinItem=2 AND E.id=D.registered_entry_id
 LEFT JOIN
 	(federated_registration_entries F INNER JOIN bundles B ON F.bundle_id=B.id) ON joinItem=3 AND E.id=F.registered_entry_id
 WHERE E.entry_id = ?
@@ -1402,7 +1437,9 @@ SELECT
 	NULL AS selector_value,
 	NULL AS trust_domain,
 	NULL AS dns_name_id,
-	NULL AS dns_name
+	NULL AS dns_name,
+	NULL AS ip_address_id,
+	NULL AS ip_address
 FROM
 	registered_entries
 WHERE id IN (SELECT id FROM listing)
@@ -1426,6 +1463,14 @@ SELECT
 	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
 FROM
 	dns_names
+WHERE registered_entry_id IN (SELECT id FROM listing)
+
+UNION
+
+SELECT
+	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
+FROM
+	ip_addresses
 WHERE registered_entry_id IN (SELECT id FROM listing)
 
 UNION
@@ -1619,7 +1664,9 @@ SELECT
 	NULL AS selector_value,
 	NULL AS trust_domain,
 	NULL AS dns_name_id,
-	NULL AS dns_name
+	NULL AS dns_name,
+	NULL AS ip_address_id,
+	NULL AS ip_address
 FROM
 	registered_entries
 `)
@@ -1630,7 +1677,7 @@ FROM
 UNION
 
 SELECT
-	F.registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, B.trust_domain, NULL, NULL
+	F.registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, B.trust_domain, NULL, NULL, NULL, NULL
 FROM
 	bundles B
 INNER JOIN
@@ -1645,7 +1692,7 @@ ON
 UNION
 
 SELECT
-	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
+	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value, NULL, NULL
 FROM
 	dns_names
 `)
@@ -1656,7 +1703,18 @@ FROM
 UNION
 
 SELECT
-	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, type, value, NULL, NULL, NULL
+	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
+FROM
+	ip_addresses
+`)
+	if filtered {
+		builder.WriteString("WHERE registered_entry_id IN (SELECT id FROM listing)\n")
+	}
+	builder.WriteString(`
+UNION
+
+SELECT
+	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, type, value, NULL, NULL, NULL, NULL, NULL
 FROM
 	selectors
 `)
@@ -1664,7 +1722,7 @@ FROM
 		builder.WriteString("WHERE registered_entry_id IN (SELECT id FROM listing)\n")
 	}
 	builder.WriteString(`
-ORDER BY e_id, selector_id, dns_name_id
+ORDER BY e_id, selector_id, dns_name_id, ip_address_id
 ;`)
 
 	return builder.String(), args, nil
@@ -1696,7 +1754,9 @@ SELECT
 	NULL AS selector_value,
 	NULL AS trust_domain,
 	NULL ::integer AS dns_name_id,
-	NULL AS dns_name
+	NULL AS dns_name,
+	NULL ::integer AS ip_address_id,
+	NULL AS ip_address
 FROM
 	registered_entries
 `)
@@ -1725,6 +1785,17 @@ SELECT
 	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
 FROM
 	dns_names
+`)
+	if filtered {
+		builder.WriteString("WHERE registered_entry_id IN (SELECT id FROM listing)\n")
+	}
+	builder.WriteString(`
+UNION
+
+SELECT
+	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
+FROM
+	ip_addresses
 `)
 	if filtered {
 		builder.WriteString("WHERE registered_entry_id IN (SELECT id FROM listing)\n")
@@ -1778,6 +1849,8 @@ SELECT
 	B.trust_domain,
 	D.id AS dns_name_id,
 	D.value AS dns_name
+	I.id AS ip_address_id,
+	I.value AS ip_address
 FROM
 	registered_entries E
 LEFT JOIN
@@ -1786,6 +1859,8 @@ LEFT JOIN
 	selectors S ON joinItem=1 AND E.id=S.registered_entry_id
 LEFT JOIN
 	dns_names D ON joinItem=2 AND E.id=D.registered_entry_id
+LEFT JOIN
+	ip_addresses I ON joinItem=2 AND E.id=D.registered_entry_id
 LEFT JOIN
 	(federated_registration_entries F INNER JOIN bundles B ON F.bundle_id=B.id) ON joinItem=3 AND E.id=F.registered_entry_id
 `)
@@ -1830,7 +1905,9 @@ SELECT
 	NULL AS selector_value,
 	NULL AS trust_domain,
 	NULL AS dns_name_id,
-	NULL AS dns_name
+	NULL AS dns_name,
+	NULL AS ip_address_id,
+	NULL AS ip_address
 FROM
 	registered_entries
 `)
@@ -1859,6 +1936,17 @@ SELECT
 	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
 FROM
 	dns_names
+`)
+	if filtered {
+		builder.WriteString("WHERE registered_entry_id IN (SELECT id FROM listing)\n")
+	}
+	builder.WriteString(`
+UNION
+
+SELECT
+	registered_entry_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, id, value
+FROM
+	ip_addresses
 `)
 	if filtered {
 		builder.WriteString("WHERE registered_entry_id IN (SELECT id FROM listing)\n")
@@ -2110,6 +2198,8 @@ type entryRow struct {
 	TrustDomain   sql.NullString
 	DNSNameID     sql.NullInt64
 	DNSName       sql.NullString
+	IPAddressID   sql.NullInt64
+	IPAddress     sql.NullString
 }
 
 func scanEntryRow(rs *sql.Rows, r *entryRow) error {
@@ -2128,6 +2218,8 @@ func scanEntryRow(rs *sql.Rows, r *entryRow) error {
 		&r.TrustDomain,
 		&r.DNSNameID,
 		&r.DNSName,
+		&r.IPAddressID,
+		&r.IPAddress,
 	))
 }
 
@@ -2166,6 +2258,10 @@ func fillEntryFromRow(entry *common.RegistrationEntry, r *entryRow) error {
 
 	if r.DNSName.Valid {
 		entry.DnsNames = append(entry.DnsNames, r.DNSName.String)
+	}
+
+	if r.IPAddress.Valid {
+		entry.IPAddresses = append(entry.IPAddresses, r.IPAddress.String)
 	}
 
 	if r.TrustDomain.Valid {
@@ -2228,6 +2324,20 @@ func updateRegistrationEntry(tx *gorm.DB,
 		dnsList = append(dnsList, dns)
 	}
 
+	// Delete existing IP Addresses - we will write new ones
+	if err := tx.Exec("DELETE FROM ip_addresses WHERE registered_entry_id = ?", entry.ID).Error; err != nil {
+		return nil, sqlError.Wrap(err)
+	}
+
+	ipAddressList := []IPAddress{}
+	for _, d := range req.Entry.IPAddresses {
+		ipAddress := IPAddress{
+			Value: d,
+		}
+
+		ipAddressList = append(ipAddressList, ipAddress)
+	}
+
 	entry.SpiffeID = req.Entry.SpiffeId
 	entry.ParentID = req.Entry.ParentId
 	entry.TTL = req.Entry.Ttl
@@ -2236,6 +2346,7 @@ func updateRegistrationEntry(tx *gorm.DB,
 	entry.Downstream = req.Entry.Downstream
 	entry.Expiry = req.Entry.EntryExpiry
 	entry.DNSList = dnsList
+	entry.IPAddressList = ipAddressList
 	if err := tx.Save(&entry).Error; err != nil {
 		return nil, sqlError.Wrap(err)
 	}
@@ -2440,6 +2551,19 @@ func modelToEntry(tx *gorm.DB, model RegisteredEntry) (*common.RegistrationEntry
 		}
 	}
 
+	var fetchedIPAddresses []*IPAddress
+	if err := tx.Model(&model).Related(&fetchedIPAddresses).Order("registered_entry_id ASC").Error; err != nil {
+		return nil, sqlError.Wrap(err)
+	}
+
+	var ipAddressList []string
+	if len(fetchedIPAddresses) > 0 {
+		ipAddressList = make([]string, 0, len(fetchedIPAddresses))
+		for _, fetchedDNS := range fetchedDNSs {
+			ipAddressList = append(ipAddressList, fetchedDNS.Value)
+		}
+	}
+
 	var fetchedBundles []*Bundle
 	if err := tx.Model(&model).Association("FederatesWith").Find(&fetchedBundles).Error; err != nil {
 		return nil, sqlError.Wrap(err)
@@ -2461,6 +2585,7 @@ func modelToEntry(tx *gorm.DB, model RegisteredEntry) (*common.RegistrationEntry
 		Downstream:    model.Downstream,
 		EntryExpiry:   model.Expiry,
 		DnsNames:      dnsList,
+		IPAddresses:   ipAddressList,
 	}, nil
 }
 

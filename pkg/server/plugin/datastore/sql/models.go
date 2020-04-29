@@ -83,6 +83,7 @@ type RegisteredEntry struct {
 	Expiry int64 `gorm:"index"`
 	// (optional) DNS entries
 	DNSList []DNSName
+	IPAddressList []IPAddress
 
 	// RevisionNumber is a counter that is incremented when the entry is
 	// updated.
@@ -117,6 +118,20 @@ type DNSName struct {
 func (DNSName) TableName() string {
 	return "dns_names"
 }
+
+// IPAddress holds a IP Address for a registration entry
+type IPAddress struct {
+	Model
+
+	RegisteredEntryID uint   `gorm:"unique_index:idx_ip_address_entry"`
+	Value             string `gorm:"unique_index:idx_ip_address_entry"`
+}
+
+// TableName gets table name for IP Address entries
+func (IPAddress) TableName() string {
+	return "ip_addresses"
+}
+
 
 // Migration holds database schema version number, and
 // the SPIRE Code version number

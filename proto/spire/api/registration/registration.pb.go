@@ -798,6 +798,7 @@ type MintX509SVIDRequest struct {
 	// DNS names to include as DNS SANs in the X509-SVID. If set, the first
 	// in the list is also set as the X509-SVID common name.
 	DnsNames             []string `protobuf:"bytes,4,rep,name=dns_names,json=dnsNames,proto3" json:"dns_names,omitempty"`
+	IPAddresses          []string `protobuf:"bytes,4,rep,name=ip_addresses,json=ipAddresses,proto3" json:"ip_addresses,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -852,6 +853,13 @@ func (m *MintX509SVIDRequest) GetTtl() int32 {
 func (m *MintX509SVIDRequest) GetDnsNames() []string {
 	if m != nil {
 		return m.DnsNames
+	}
+	return nil
+}
+
+func (m *MintX509SVIDRequest) GetIPAddresses() []string {
+	if m != nil {
+		return m.IPAddresses
 	}
 	return nil
 }

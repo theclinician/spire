@@ -46,6 +46,9 @@ type UpdateConfig struct {
 
 	// DNSNames entries for SVIDs based on this entry
 	DNSNames StringsFlag
+
+	// IPAddresses entries for SVIDs based on this entry
+	IPAddresses StringsFlag
 }
 
 // Validate performs basic validation, even on fields that we
@@ -160,6 +163,7 @@ func (c UpdateCLI) parseConfig(config *UpdateConfig) ([]*common.RegistrationEntr
 		Downstream:  config.Downstream,
 		EntryExpiry: config.EntryExpiry,
 		DnsNames:    config.DNSNames,
+		IPAddresses: config.IPAddresses,
 	}
 
 	selectors := []*common.Selector{}
@@ -230,6 +234,7 @@ func (UpdateCLI) newConfig(args []string) (*UpdateConfig, error) {
 	f.Int64Var(&c.EntryExpiry, "entryExpiry", 0, "An expiry, from epoch in seconds, for the resulting registration entry to be pruned")
 
 	f.Var(&c.DNSNames, "dns", "A DNS name that will be included in SVIDs issued based on this entry, where appropriate. Can be used more than once")
+	f.Var(&c.IPAddresses, "ip", "An IP Address that will be included in SVIDs issued based on this entry, where appropriate. Can be used more than once")
 
 	return c, f.Parse(args)
 }

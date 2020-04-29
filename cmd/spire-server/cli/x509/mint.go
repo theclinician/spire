@@ -47,6 +47,7 @@ type mintCommand struct {
 	spiffeID   string
 	ttl        time.Duration
 	dnsNames   common_cli.StringsFlag
+	ipAddresses   common_cli.StringsFlag
 	write      string
 }
 
@@ -77,6 +78,7 @@ func (c *mintCommand) parseFlags(args []string) error {
 	fs.StringVar(&c.spiffeID, "spiffeID", "", "SPIFFE ID of the X509-SVID")
 	fs.DurationVar(&c.ttl, "ttl", 0, "TTL of the X509-SVID")
 	fs.Var(&c.dnsNames, "dns", "DNS name that will be included in SVID. Can be used more than once.")
+	fs.Var(&c.ipAddresses, "ip", "IP address that will be included in SVID. Can be used more than once.")
 	fs.StringVar(&c.write, "write", "", "Directory to write output to instead of stdout")
 	return fs.Parse(args)
 }
@@ -105,6 +107,7 @@ func (c *mintCommand) run() error {
 		Csr:      csr,
 		Ttl:      ttlToSeconds(c.ttl),
 		DnsNames: c.dnsNames,
+		IPAddresses: c.ipAddresses,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to mint SVID: %v", err)

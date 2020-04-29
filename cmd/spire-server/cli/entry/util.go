@@ -80,6 +80,9 @@ func printEntry(e *common.RegistrationEntry) {
 	for _, dnsName := range e.DnsNames {
 		fmt.Printf("DNS name      : %s\n", dnsName)
 	}
+	for _, ipAddress := range e.IPAddresses {
+		fmt.Printf("IP address    : %s\n", ipAddress)
+	}
 
 	// admin is rare, so only show admin if true to keep
 	// from muddying the output.

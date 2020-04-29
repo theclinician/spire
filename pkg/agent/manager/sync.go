@@ -54,6 +54,9 @@ func (m *manager) synchronize(ctx context.Context) (err error) {
 		case existingEntry != nil && !stringsEqual(existingEntry.DnsNames, newEntry.DnsNames):
 			// DNS Names have changed
 			outdated++
+		case existingEntry != nil && !stringsEqual(existingEntry.IPAddresses, newEntry.IPAddresses):
+			// IP Addresses have changed
+			outdated++
 		case existingEntry != nil && existingEntry.Ttl != newEntry.Ttl:
 			// TTL has changed
 			outdated++

@@ -141,6 +141,9 @@ message MintX509SVIDRequest {
     // DNS names to include as DNS SANs in the X509-SVID. If set, the first
     // in the list is also set as the X509-SVID common name.
     repeated string dns_names = 4;
+
+    // IP Addresses to include as DNS SANs in the X509-SVID.
+    repeated string ip_addresses = 4;
 }
 
 message MintX509SVIDResponse {

@@ -309,6 +309,7 @@ type RegistrationEntry struct {
 	EntryExpiry int64 `protobuf:"varint,9,opt,name=entryExpiry,proto3" json:"entryExpiry,omitempty"`
 	//* DNS entries
 	DnsNames             []string `protobuf:"bytes,10,rep,name=dns_names,json=dnsNames,proto3" json:"dns_names,omitempty"`
+	IPAddresses          []string `protobuf:"bytes,10,rep,name=ip_address,json=ipAddresses,proto3" json:"ip_address,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -405,6 +406,13 @@ func (m *RegistrationEntry) GetEntryExpiry() int64 {
 func (m *RegistrationEntry) GetDnsNames() []string {
 	if m != nil {
 		return m.DnsNames
+	}
+	return nil
+}
+
+func (m *RegistrationEntry) GetIPAddresses() []string {
+	if m != nil {
+		return m.IPAddresses
 	}
 	return nil
 }
